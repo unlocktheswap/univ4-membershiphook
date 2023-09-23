@@ -94,8 +94,9 @@ contract MembershipHook is BaseHook {
         IPoolManager.SwapParams calldata params,
         bytes calldata data
     ) external returns (uint24 newFee) {
-        //bool hasMembership = lockContract.balanceOf(msg.sender) == 0;
-        bool hasMembership = false;
+        PoolId poolNum = key.toId();
+        IPublicLock lockContract = lockContracts[poolNum];
+        bool hasMembership = lockContract.balanceOf(msg.sender) > 0;
         if (hasMembership) {
             return 0;
         }
