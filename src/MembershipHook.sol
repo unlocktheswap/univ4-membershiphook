@@ -9,8 +9,8 @@ import {PoolKey} from "@uniswap/v4-core/contracts/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/contracts/types/PoolId.sol";
 import {BalanceDelta} from "@uniswap/v4-core/contracts/types/BalanceDelta.sol";
 
-import { IUnlock } from "../lib/unlock/smart-contracts/contracts/interfaces/IUnlock.sol";
-import { IPublicLock } from "../lib/unlock/smart-contracts/contracts/interfaces/IPublicLock.sol";
+import { IUnlock } from "unlock/smart-contracts/contracts/interfaces/IUnlock.sol";
+import { IPublicLock } from "unlock/smart-contracts/contracts/interfaces/IPublicLock.sol";
 
 contract MembershipHook is BaseHook {
     using PoolIdLibrary for PoolKey;
@@ -75,7 +75,7 @@ contract MembershipHook is BaseHook {
     }
 
     /// @notice Purchases a membership and returns the token ID
-    function purchaseMembership(PoolKey calldata poolKey, uint256 value) external payable returns (uint256) {
+    function purchaseMembership(PoolKey calldata poolKey, uint256 value) external payable returns (uint256 tokenId) {
         // parameters for key purchase
         uint256[] memory _values = new uint256[](1);
         _values[0] = value;
@@ -96,11 +96,28 @@ contract MembershipHook is BaseHook {
 
         _withdrawAndDonate(poolKey, value);
 
-        return tokenIds[0];
+        tokenId = tokenIds[0];
     }
 
     /// @notice Withdraws all funds from the lock and donates them to the pool
-    function _withdrawAndDonate(PoolKey calldata poolKey, uint256 amount) internal {
+    function _withdrawAndDonate(PoolKey calldata poolKey, uint256 amount) internal returns (BalanceDelta delta) {
         // withdraw all funds from the lock
+        lockAddress.withdraw(tokenAddress, address(this), amount);
+
+        uint256 _amount0 = 0;
+        uint256 _amount1 = 0;
+
+        // check which currency to donate
+        if (poolKey.currency0 == tokenAddress) {
+            _amount0 = amount;
+        } else if (poolKey.currency1 == tokenAddress) {
+            _amount1 = amount;
+        } else {
+            // purchase token is different from pool token pair -> swap token to one of the pool tokens
+        }
+
+        bytes calldata _hookData;
+
+        delta = poolManager.donate(poolKey, amount0, amount1, _hookData);
     }
 }
