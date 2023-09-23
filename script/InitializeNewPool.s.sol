@@ -27,7 +27,13 @@ contract InitializeNewPool is Script {
     address public token0;
     address public token1;
 
-    function setUp(address _poolManager, address _hookContract, address _lockContract, address _token0, address _token1) public {
+    function setUp() public {
+        address _poolManager = 0x0165878A594ca255338adfa4d48449f69242Eb8F;
+        address _hookContract = 0x4899Df6EE9F016c225b97D11aB6C5b8a97035b51;
+        address _lockContract = 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0;
+        address _token0 = 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6;
+        address _token1 = 0x8A791620dd6260079BF849Dc5567aDC3F2FdC318;
+
         poolManager = IPoolManager(_poolManager);
         hookContract = IHooks(_hookContract);
         lockContract = IPublicLock(_lockContract);
@@ -45,10 +51,10 @@ contract InitializeNewPool is Script {
         console2.log("A");
 
         PoolKey memory poolKey = PoolKey({
-            currency0: Currency.wrap(token0), 
-            currency1: Currency.wrap(token1), 
-            fee: 3000, 
-            hooks: IHooks(address(0)), 
+            currency0: Currency.wrap(token0),
+            currency1: Currency.wrap(token1),
+            fee: 3000,
+            hooks: IHooks(address(0)),
             tickSpacing: 10
         });
 
@@ -57,7 +63,12 @@ contract InitializeNewPool is Script {
         uint160 sqrtPriceX96 = 3169126500570573503741758013440;
         bytes memory lockAddressBytes = abi.encodePacked(address(lockContract));
 
-        int24 tick = poolManager.initialize(poolKey, sqrtPriceX96, lockAddressBytes);
+        int24 tick = poolManager.initialize(
+            poolKey,
+            sqrtPriceX96,
+            lockAddressBytes
+        );
+        console2.log("C");
 
         lockContract.addLockManager(address(hookContract));
 
