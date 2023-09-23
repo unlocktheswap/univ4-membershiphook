@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
+import "forge-std/console2.sol";
 import {Hooks} from "@uniswap/v4-core/contracts/libraries/Hooks.sol";
 import {PoolManager} from "@uniswap/v4-core/contracts/PoolManager.sol";
 import {IPoolManager} from "@uniswap/v4-core/contracts/interfaces/IPoolManager.sol";
@@ -11,6 +12,8 @@ import {PoolDonateTest} from "@uniswap/v4-core/contracts/test/PoolDonateTest.sol
 import {MembershipHook} from "../src/MembershipHook.sol";
 import {IPublicLock} from "../src/interfaces/IPublicLock.sol";
 import {HookMiner} from "../test/utils/HookMiner.sol";
+
+import {MockERC20} from "@uniswap/v4-core/test/foundry-tests/utils/MockERC20.sol";
 
 /// @notice Forge script for deploying v4 & hooks to **anvil**
 /// @dev This script only works on an anvil RPC because v4 exceeds bytecode limits
@@ -29,7 +32,7 @@ contract MembershipHookScript is Script {
         // vm.broadcast();
         PoolManager manager = new PoolManager(500000);
         // TODO: create Unlock factory
-        IPublicLock lockContract = IPublicLock(address(42));
+        // IPublicLock lockContract = IPublicLock(address(42));
 
         // hook contracts must have specific flags encoded in the address
         uint160 flags = uint160(
@@ -48,8 +51,7 @@ contract MembershipHookScript is Script {
         // Deploy the hook using CREATE2
         // vm.broadcast();
         MembershipHook membershipHook = new MembershipHook{salt: salt}(
-            IPoolManager(address(manager)),
-            lockContract
+            IPoolManager(address(manager))
         );
 
         require(
@@ -59,9 +61,26 @@ contract MembershipHookScript is Script {
 
         // Additional helpers for interacting with the pool
         // vm.startBroadcast();
-        new PoolModifyPositionTest(IPoolManager(address(manager)));
-        new PoolSwapTest(IPoolManager(address(manager)));
+
+        // These will also mint totalSupply to msg.sender
+        uint totalSupply = 10000 ether;
+        MockERC20 usdc = new MockERC20("USDC", "USDC", 18, totalSupply);
+        MockERC20 weth = new MockERC20("WETH", "WETH", 18, totalSupply);
+        require(address(usdc) < address(weth), "Bad address sorting");
+
+        PoolModifyPositionTest pmpt = new PoolModifyPositionTest(
+            IPoolManager(address(manager))
+        );
+        PoolSwapTest pst = new PoolSwapTest(IPoolManager(address(manager)));
         new PoolDonateTest(IPoolManager(address(manager)));
+
+        console2.log("------------ ADDRESSES! --------- ");
+        console2.log("USDC", address(usdc));
+        console2.log("WETH", address(weth));
+        console2.log("SwapRouter", address(pst));
+        console2.log("ModifyPositionRouter", address(pmpt));
+        console2.log("MembershipHook", address(membershipHook));
+
         vm.stopBroadcast();
     }
 }
