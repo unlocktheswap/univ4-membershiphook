@@ -39,4 +39,19 @@ contract MembershipHook is BaseHook {
         beforeSwapCount++;
         return BaseHook.beforeSwap.selector;
     }
+
+    /// @notice Returns the dynamic fee that we'll charge on swaps: free for members, 2% for others
+    function getFee(
+        address sender,
+        PoolKey calldata key,
+        IPoolManager.SwapParams calldata params,
+        bytes calldata data
+    ) external returns (uint24 newFee) {
+        bool hasMembership = false;
+        if (hasMembership) {
+            return 0;
+        }
+        // 2%
+        return 20000;
+    }
 }

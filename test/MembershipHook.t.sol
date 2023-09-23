@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
+import "forge-std/console2.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 import {IHooks} from "@uniswap/v4-core/contracts/interfaces/IHooks.sol";
 import {Hooks} from "@uniswap/v4-core/contracts/libraries/Hooks.sol";
@@ -44,11 +45,14 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
             "MembershipHookTest: hook address mismatch"
         );
 
+        // Set our fee to be the DYNAMIC_FEE_FLAG, we won't use whatever the value is anyways
+        uint24 dynamicFee = 0x800000;
+
         // Create the pool
         poolKey = PoolKey(
             Currency.wrap(address(token0)),
             Currency.wrap(address(token1)),
-            3000,
+            dynamicFee,
             60,
             IHooks(membershipHook)
         );
@@ -79,11 +83,26 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
 
         assertEq(membershipHook.beforeSwapCount(), 0);
 
+        // Make sure our dynamic fee was applied (with hardcoded non-member fee)
+        uint bal0pre = Currency.wrap(address(token0)).balanceOf(address(this));
+        uint bal1pre = Currency.wrap(address(token1)).balanceOf(address(this));
+
         // Perform a test swap //
-        int256 amount = 100;
+        int256 amount = 100000;
         bool zeroForOne = true;
         swap(poolKey, amount, zeroForOne);
         // ------------------- //
+
+        uint bal0post = Currency.wrap(address(token0)).balanceOf(address(this));
+        uint bal1post = Currency.wrap(address(token1)).balanceOf(address(this));
+        uint diff0 = bal0pre - bal0post;
+        uint diff1 = bal1post - bal1pre;
+        uint feePaid = diff0 - diff1;
+
+        // 2% of 100000 is 2000, but looks like it rounds up one
+        // console2.log(diff0);
+        // console2.log(diff1);
+        assertGe(feePaid, 2000);
 
         assertEq(membershipHook.beforeSwapCount(), 1);
     }
