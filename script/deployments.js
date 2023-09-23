@@ -1,4 +1,8 @@
-const { ethers, upgrades, run, unlock } = require('hardhat')
+const { hre, ethers, upgrades, run, unlock } = require('hardhat')
+
+//const networkName = "customNetwork"; // Replace with the name of the network you want to use
+//console.log("CONFIGS", hre.network.configs)
+//const network = hre.network.configs[networkName];
 
 async function main({ unlockVersion } = {}) {
   const [deployer] = await ethers.getSigners()
