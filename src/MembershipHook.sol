@@ -15,6 +15,8 @@ contract MembershipHook is BaseHook {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
 
+    PoolKey public poolKey;
+
     // Interface for the Unlock NFT contract
     IPublicLock public lockContract;
     // Address of the erc20 that has to be used to pay for membership
@@ -34,7 +36,7 @@ contract MembershipHook is BaseHook {
         return
             Hooks.Calls({
                 beforeInitialize: false,
-                afterInitialize: false,
+                afterInitialize: true,
                 beforeModifyPosition: false,
                 afterModifyPosition: false,
                 beforeSwap: true,
@@ -42,6 +44,20 @@ contract MembershipHook is BaseHook {
                 beforeDonate: false,
                 afterDonate: false
             });
+    }
+
+    function afterInitialize(
+        address,
+        PoolKey calldata key,
+        uint160,
+        int24,
+        bytes calldata
+    ) external override poolManagerOnly returns (bytes4) {
+        // TODO - make structure more flexible so one hook could support multiple pools
+        // it's ugly to need to pass it in externally so we can stash it here
+        // but stashing means that we can't support multiple pools
+        poolKey = key;
+        return BaseHook.afterInitialize.selector;
     }
 
     function beforeSwap(
@@ -71,7 +87,6 @@ contract MembershipHook is BaseHook {
 
     /// @notice Purchases a membership and returns the token ID
     function purchaseMembership(
-        PoolKey calldata poolKey,
         uint256 value
     ) external payable returns (uint256 tokenId) {
         // parameters for key purchase
@@ -98,14 +113,13 @@ contract MembershipHook is BaseHook {
             _data
         );
 
-        _withdrawAndDonate(poolKey, value);
+        _withdrawAndDonate(value);
 
         tokenId = tokenIds[0];
     }
 
     /// @notice Withdraws all funds from the lock and donates them to the pool
     function _withdrawAndDonate(
-        PoolKey calldata poolKey,
         uint256 amount
     ) internal returns (BalanceDelta delta) {
         // withdraw all funds from the lock
