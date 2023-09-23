@@ -8,31 +8,26 @@ import {IPoolManager} from "@uniswap/v4-core/contracts/interfaces/IPoolManager.s
 import {PoolKey} from "@uniswap/v4-core/contracts/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/contracts/types/PoolId.sol";
 import {BalanceDelta} from "@uniswap/v4-core/contracts/types/BalanceDelta.sol";
-
-import { IUnlock } from "unlock/smart-contracts/contracts/interfaces/IUnlock.sol";
-import { IPublicLock } from "unlock/smart-contracts/contracts/interfaces/IPublicLock.sol";
+import {Currency, CurrencyLibrary} from "@uniswap/v4-core/contracts/types/Currency.sol";
+import {IPublicLock} from "./interfaces/IPublicLock.sol";
 
 contract MembershipHook is BaseHook {
     using PoolIdLibrary for PoolKey;
+    using CurrencyLibrary for Currency;
 
-    address public lockAddress;
+    // Interface for the Unlock NFT contract
+    IPublicLock public lockContract;
+    // Address of the erc20 that has to be used to pay for membership
     address public tokenAddress;
 
     uint256 public beforeSwapCount;
 
-    constructor(IPoolManager _poolManager, IUnlock _unlock) BaseHook(_poolManager) {
-        // create the lock
-        uint256 _expirationDuration = 2_592_000; // 30 days
-        address _tokenAddress = address(0); // address of the token to use for purchases -> 0 means ETH
-        uint256 _keyPrice = 10_000_000_000_000_000; // 0.01 ETH
-        uint256 _maxNumberOfKeys = 1;
-        string memory _lockName = "ZeroFeeMembership";
-        bytes12 _salt = bytes12(0);
-
-        lockAddress =
-            _unlock.createLock(_expirationDuration, _tokenAddress, _keyPrice, _maxNumberOfKeys, _lockName, _salt);
-        tokenAddress = _tokenAddress;
-
+    constructor(
+        IPoolManager _poolManager,
+        IPublicLock _lockContract
+    ) BaseHook(_poolManager) {
+        lockContract = _lockContract;
+        tokenAddress = lockContract.tokenAddress();
     }
 
     function getHooksCalls() public pure override returns (Hooks.Calls memory) {
@@ -66,7 +61,7 @@ contract MembershipHook is BaseHook {
         IPoolManager.SwapParams calldata params,
         bytes calldata data
     ) external returns (uint24 newFee) {
-        bool hasMembership = (IPublicLock(lockAddress).balanceOf(msg.sender) == 0);
+        bool hasMembership = lockContract.balanceOf(msg.sender) == 0;
         if (hasMembership) {
             return 0;
         }
@@ -75,7 +70,10 @@ contract MembershipHook is BaseHook {
     }
 
     /// @notice Purchases a membership and returns the token ID
-    function purchaseMembership(PoolKey calldata poolKey, uint256 value) external payable returns (uint256 tokenId) {
+    function purchaseMembership(
+        PoolKey calldata poolKey,
+        uint256 value
+    ) external payable returns (uint256 tokenId) {
         // parameters for key purchase
         uint256[] memory _values = new uint256[](1);
         _values[0] = value;
@@ -91,8 +89,14 @@ contract MembershipHook is BaseHook {
 
         bytes[] memory _data = new bytes[](1);
         _data[0] = bytes("0x");
-        
-        uint256[] memory tokenIds = IPublicLock(lockAddress).purchase{ value: msg.value }(_values, _recipients, _referrers, _keyManagers, _data);
+
+        uint256[] memory tokenIds = lockContract.purchase{value: msg.value}(
+            _values,
+            _recipients,
+            _referrers,
+            _keyManagers,
+            _data
+        );
 
         _withdrawAndDonate(poolKey, value);
 
@@ -100,24 +104,30 @@ contract MembershipHook is BaseHook {
     }
 
     /// @notice Withdraws all funds from the lock and donates them to the pool
-    function _withdrawAndDonate(PoolKey calldata poolKey, uint256 amount) internal returns (BalanceDelta delta) {
+    function _withdrawAndDonate(
+        PoolKey calldata poolKey,
+        uint256 amount
+    ) internal returns (BalanceDelta delta) {
         // withdraw all funds from the lock
-        lockAddress.withdraw(tokenAddress, address(this), amount);
+
+        lockContract.withdraw(tokenAddress, payable(address(this)), amount);
 
         uint256 _amount0 = 0;
         uint256 _amount1 = 0;
 
         // check which currency to donate
-        if (poolKey.currency0 == tokenAddress) {
+        if (Currency.unwrap(poolKey.currency0) == tokenAddress) {
             _amount0 = amount;
-        } else if (poolKey.currency1 == tokenAddress) {
+        } else if (Currency.unwrap(poolKey.currency1) == tokenAddress) {
             _amount1 = amount;
         } else {
             // purchase token is different from pool token pair -> swap token to one of the pool tokens
+            // TODO - implement handling for this case
+            revert("Not handled");
         }
 
-        bytes calldata _hookData;
+        bytes memory _hookData;
 
-        delta = poolManager.donate(poolKey, amount0, amount1, _hookData);
+        delta = poolManager.donate(poolKey, _amount0, _amount1, _hookData);
     }
 }

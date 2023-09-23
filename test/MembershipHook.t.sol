@@ -14,9 +14,8 @@ import {Deployers} from "@uniswap/v4-core/test/foundry-tests/utils/Deployers.sol
 import {CurrencyLibrary, Currency} from "@uniswap/v4-core/contracts/types/Currency.sol";
 import {HookTest} from "./utils/HookTest.sol";
 import {MembershipHook} from "../src/MembershipHook.sol";
+import {IPublicLock} from "../src/interfaces/IPublicLock.sol";
 import {HookMiner} from "./utils/HookMiner.sol";
-
-import { IUnlock } from "../lib/unlock/smart-contracts/contracts/interfaces/IUnlock.sol";
 
 contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
     using PoolIdLibrary for PoolKey;
@@ -27,8 +26,8 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
     PoolId poolId;
 
     function setUp() public {
-        // TODO: create Unlock factory
-        IUnlock unlock = IUnlock(address(42));
+        // Need to create Unlock factory elsewhere
+        IPublicLock lockContract = IPublicLock(address(42));
 
         // creates the pool manager, test tokens, and other utility routers
         HookTest.initHookTestEnv();
@@ -43,8 +42,8 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
             abi.encode(address(manager))
         );
         membershipHook = new MembershipHook{salt: salt}(
-            IPoolManager(address(manager)), 
-            IUnlock(address(unlock))
+            IPoolManager(address(manager)),
+            lockContract
         );
         require(
             address(membershipHook) == hookAddress,

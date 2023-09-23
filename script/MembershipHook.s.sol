@@ -9,6 +9,7 @@ import {PoolModifyPositionTest} from "@uniswap/v4-core/contracts/test/PoolModify
 import {PoolSwapTest} from "@uniswap/v4-core/contracts/test/PoolSwapTest.sol";
 import {PoolDonateTest} from "@uniswap/v4-core/contracts/test/PoolDonateTest.sol";
 import {MembershipHook} from "../src/MembershipHook.sol";
+import {IPublicLock} from "../src/interfaces/IPublicLock.sol";
 import {HookMiner} from "../test/utils/HookMiner.sol";
 
 /// @notice Forge script for deploying v4 & hooks to **anvil**
@@ -27,6 +28,8 @@ contract MembershipHookScript is Script {
 
         // vm.broadcast();
         PoolManager manager = new PoolManager(500000);
+        // TODO: create Unlock factory
+        IPublicLock lockContract = IPublicLock(address(42));
 
         // hook contracts must have specific flags encoded in the address
         uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG);
@@ -43,8 +46,10 @@ contract MembershipHookScript is Script {
         // Deploy the hook using CREATE2
         // vm.broadcast();
         MembershipHook membershipHook = new MembershipHook{salt: salt}(
-            IPoolManager(address(manager))
+            IPoolManager(address(manager)),
+            lockContract
         );
+
         require(
             address(membershipHook) == hookAddress,
             "MembershipHookScript: hook address mismatch"
