@@ -9,12 +9,31 @@ import {PoolKey} from "@uniswap/v4-core/contracts/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/contracts/types/PoolId.sol";
 import {BalanceDelta} from "@uniswap/v4-core/contracts/types/BalanceDelta.sol";
 
+import { IUnlock } from "../lib/unlock/smart-contracts/contracts/interfaces/IUnlock.sol";
+import { IPublicLock } from "../lib/unlock/smart-contracts/contracts/interfaces/IPublicLock.sol";
+
 contract MembershipHook is BaseHook {
     using PoolIdLibrary for PoolKey;
 
+    address public lockAddress;
+    address public tokenAddress;
+
     uint256 public beforeSwapCount;
 
-    constructor(IPoolManager _poolManager) BaseHook(_poolManager) {}
+    constructor(IPoolManager _poolManager, IUnlock _unlock) BaseHook(_poolManager) {
+        // create the lock
+        uint256 _expirationDuration = 2_592_000; // 30 days
+        address _tokenAddress = address(0); // address of the token to use for purchases -> 0 means ETH
+        uint256 _keyPrice = 10_000_000_000_000_000; // 0.01 ETH
+        uint256 _maxNumberOfKeys = 1;
+        string memory _lockName = "ZeroFeeMembership";
+        bytes12 _salt = bytes12(0);
+
+        lockAddress =
+            _unlock.createLock(_expirationDuration, _tokenAddress, _keyPrice, _maxNumberOfKeys, _lockName, _salt);
+        tokenAddress = _tokenAddress;
+
+    }
 
     function getHooksCalls() public pure override returns (Hooks.Calls memory) {
         return
@@ -47,11 +66,41 @@ contract MembershipHook is BaseHook {
         IPoolManager.SwapParams calldata params,
         bytes calldata data
     ) external returns (uint24 newFee) {
-        bool hasMembership = false;
+        bool hasMembership = (IPublicLock(lockAddress).balanceOf(msg.sender) == 0);
         if (hasMembership) {
             return 0;
         }
         // 2%
         return 20000;
+    }
+
+    /// @notice Purchases a membership and returns the token ID
+    function purchaseMembership(PoolKey calldata poolKey, uint256 value) external payable returns (uint256) {
+        // parameters for key purchase
+        uint256[] memory _values = new uint256[](1);
+        _values[0] = value;
+
+        address[] memory _recipients = new address[](1);
+        _recipients[0] = msg.sender;
+
+        address[] memory _referrers = new address[](1);
+        _referrers[0] = msg.sender;
+
+        address[] memory _keyManagers = new address[](1);
+        _keyManagers[0] = msg.sender;
+
+        bytes[] memory _data = new bytes[](1);
+        _data[0] = bytes("0x");
+        
+        uint256[] memory tokenIds = IPublicLock(lockAddress).purchase{ value: msg.value }(_values, _recipients, _referrers, _keyManagers, _data);
+
+        _withdrawAndDonate(poolKey, value);
+
+        return tokenIds[0];
+    }
+
+    /// @notice Withdraws all funds from the lock and donates them to the pool
+    function _withdrawAndDonate(PoolKey calldata poolKey, uint256 amount) internal {
+        // withdraw all funds from the lock
     }
 }

@@ -16,6 +16,8 @@ import {HookTest} from "./utils/HookTest.sol";
 import {MembershipHook} from "../src/MembershipHook.sol";
 import {HookMiner} from "./utils/HookMiner.sol";
 
+import { IUnlock } from "../lib/unlock/smart-contracts/contracts/interfaces/IUnlock.sol";
+
 contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
@@ -25,6 +27,9 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
     PoolId poolId;
 
     function setUp() public {
+        // TODO: create Unlock factory
+        IUnlock unlock = IUnlock(address(42));
+
         // creates the pool manager, test tokens, and other utility routers
         HookTest.initHookTestEnv();
 
@@ -38,7 +43,8 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
             abi.encode(address(manager))
         );
         membershipHook = new MembershipHook{salt: salt}(
-            IPoolManager(address(manager))
+            IPoolManager(address(manager)), 
+            IUnlock(address(unlock))
         );
         require(
             address(membershipHook) == hookAddress,
