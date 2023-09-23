@@ -20,16 +20,16 @@ contract MembershipHookScript is Script {
     function setUp() public {}
 
     function run() public {
-        vm.broadcast();
+        // Hardcode with anvil private key since we'll only deploy there
+        vm.startBroadcast(
+            0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+        );
+
+        // vm.broadcast();
         PoolManager manager = new PoolManager(500000);
 
         // hook contracts must have specific flags encoded in the address
-        uint160 flags = uint160(
-            Hooks.BEFORE_SWAP_FLAG |
-                Hooks.AFTER_SWAP_FLAG |
-                Hooks.BEFORE_MODIFY_POSITION_FLAG |
-                Hooks.AFTER_MODIFY_POSITION_FLAG
-        );
+        uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG);
 
         // Mine a salt that will produce a hook address with the correct flags
         (address hookAddress, bytes32 salt) = HookMiner.find(
@@ -41,7 +41,7 @@ contract MembershipHookScript is Script {
         );
 
         // Deploy the hook using CREATE2
-        vm.broadcast();
+        // vm.broadcast();
         MembershipHook membershipHook = new MembershipHook{salt: salt}(
             IPoolManager(address(manager))
         );
@@ -51,10 +51,14 @@ contract MembershipHookScript is Script {
         );
 
         // Additional helpers for interacting with the pool
-        vm.startBroadcast();
+        // vm.startBroadcast();
         new PoolModifyPositionTest(IPoolManager(address(manager)));
         new PoolSwapTest(IPoolManager(address(manager)));
         new PoolDonateTest(IPoolManager(address(manager)));
         vm.stopBroadcast();
     }
 }
+
+// Deployment commands:
+// anvil --code-size-limit 30000
+// forge script script/MembershipHook.s.sol:MembershipHookScript --fork-url http://localhost:8545 --broadcast
