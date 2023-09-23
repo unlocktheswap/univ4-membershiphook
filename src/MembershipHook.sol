@@ -17,20 +17,17 @@ contract MembershipHook is BaseHook {
 
     PoolKey public poolKey;
 
-    // Interface for the Unlock NFT contract
-    IPublicLock public lockContract;
-    // Address of the erc20 that has to be used to pay for membership
-    address public tokenAddress;
+    // Interfaces for the Unlock NFT contract
+    mapping(PoolId => IPublicLock) public lockContracts;
+    // Address of the erc20s that has to be used to pay for membership
+    mapping(PoolId => address) public tokenAddresses;
+
+    //IPublicLock public lockContract;
+    //address public tokenAddress;
 
     uint256 public beforeSwapCount;
 
-    constructor(
-        IPoolManager _poolManager,
-        IPublicLock _lockContract
-    ) BaseHook(_poolManager) {
-        lockContract = _lockContract;
-        tokenAddress = lockContract.tokenAddress();
-    }
+    constructor(IPoolManager _poolManager) BaseHook(_poolManager) {}
 
     function getHooksCalls() public pure override returns (Hooks.Calls memory) {
         return
@@ -46,17 +43,37 @@ contract MembershipHook is BaseHook {
             });
     }
 
+    /// @notice From chat-gpt, needed as we will always pass in an address with our initiialization data
+    function _bytesToAddress(bytes memory bys) internal pure returns (address) {
+        require(bys.length == 20, "Invalid address length"); // Check that the input bytes are 20 bytes long (160 bits)
+        address addr;
+        assembly {
+            addr := mload(add(bys, 0x14)) // Load the 20 bytes from memory and store it as an address
+        }
+        return addr;
+    }
+
     function afterInitialize(
         address,
         PoolKey calldata key,
         uint160,
         int24,
-        bytes calldata
+        bytes calldata _data
     ) external override poolManagerOnly returns (bytes4) {
-        // TODO - make structure more flexible so one hook could support multiple pools
-        // it's ugly to need to pass it in externally so we can stash it here
-        // but stashing means that we can't support multiple pools
-        poolKey = key;
+        // _data will be an address!
+        address _lockAddress = _bytesToAddress(_data);
+
+        IPublicLock lockContract = IPublicLock(_lockAddress);
+        // Payment token associated with the lockContract
+
+        address tokenAddress = lockContract.tokenAddress();
+
+        PoolId poolNum = key.toId();
+
+        // Add them to map
+        lockContracts[poolNum] = lockContract;
+        tokenAddresses[poolNum] = tokenAddress;
+
         return BaseHook.afterInitialize.selector;
     }
 
@@ -77,7 +94,8 @@ contract MembershipHook is BaseHook {
         IPoolManager.SwapParams calldata params,
         bytes calldata data
     ) external returns (uint24 newFee) {
-        bool hasMembership = lockContract.balanceOf(msg.sender) == 0;
+        //bool hasMembership = lockContract.balanceOf(msg.sender) == 0;
+        bool hasMembership = false;
         if (hasMembership) {
             return 0;
         }
@@ -87,6 +105,7 @@ contract MembershipHook is BaseHook {
 
     /// @notice Purchases a membership and returns the token ID
     function purchaseMembership(
+        PoolKey calldata key,
         uint256 value
     ) external payable returns (uint256 tokenId) {
         // parameters for key purchase
@@ -105,6 +124,8 @@ contract MembershipHook is BaseHook {
         bytes[] memory _data = new bytes[](1);
         _data[0] = bytes("0x");
 
+        PoolId poolNum = key.toId();
+        IPublicLock lockContract = lockContracts[poolNum];
         uint256[] memory tokenIds = lockContract.purchase{value: msg.value}(
             _values,
             _recipients,
@@ -113,16 +134,20 @@ contract MembershipHook is BaseHook {
             _data
         );
 
-        _withdrawAndDonate(value);
+        _withdrawAndDonate(value, poolNum);
 
         tokenId = tokenIds[0];
     }
 
     /// @notice Withdraws all funds from the lock and donates them to the pool
     function _withdrawAndDonate(
-        uint256 amount
+        uint256 amount,
+        PoolId poolNum
     ) internal returns (BalanceDelta delta) {
         // withdraw all funds from the lock
+
+        address tokenAddress = tokenAddresses[poolNum];
+        IPublicLock lockContract = lockContracts[poolNum];
 
         lockContract.withdraw(tokenAddress, payable(address(this)), amount);
 
