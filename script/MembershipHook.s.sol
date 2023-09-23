@@ -80,6 +80,7 @@ contract MembershipHookScript is Script {
         console2.log("SwapRouter", address(pst));
         console2.log("ModifyPositionRouter", address(pmpt));
         console2.log("MembershipHook", address(membershipHook));
+        console2.log("PoolManager", address(manager));
 
         vm.stopBroadcast();
     }
