@@ -28,12 +28,7 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
         HookTest.initHookTestEnv();
 
         // Deploy the hook to an address with the correct flags
-        uint160 flags = uint160(
-            Hooks.BEFORE_SWAP_FLAG |
-                Hooks.AFTER_SWAP_FLAG |
-                Hooks.BEFORE_MODIFY_POSITION_FLAG |
-                Hooks.AFTER_MODIFY_POSITION_FLAG
-        );
+        uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG);
         (address hookAddress, bytes32 salt) = HookMiner.find(
             address(this),
             flags,
@@ -81,11 +76,8 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
 
     function testMembershipHook() public {
         // positions were created in setup()
-        assertEq(membershipHook.beforeModifyPositionCount(), 3);
-        assertEq(membershipHook.afterModifyPositionCount(), 3);
 
         assertEq(membershipHook.beforeSwapCount(), 0);
-        assertEq(membershipHook.afterSwapCount(), 0);
 
         // Perform a test swap //
         int256 amount = 100;
@@ -94,6 +86,5 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
         // ------------------- //
 
         assertEq(membershipHook.beforeSwapCount(), 1);
-        assertEq(membershipHook.afterSwapCount(), 1);
     }
 }

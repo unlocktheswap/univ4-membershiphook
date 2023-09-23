@@ -13,10 +13,6 @@ contract MembershipHook is BaseHook {
     using PoolIdLibrary for PoolKey;
 
     uint256 public beforeSwapCount;
-    uint256 public afterSwapCount;
-
-    uint256 public beforeModifyPositionCount;
-    uint256 public afterModifyPositionCount;
 
     constructor(IPoolManager _poolManager) BaseHook(_poolManager) {}
 
@@ -25,10 +21,10 @@ contract MembershipHook is BaseHook {
             Hooks.Calls({
                 beforeInitialize: false,
                 afterInitialize: false,
-                beforeModifyPosition: true,
-                afterModifyPosition: true,
+                beforeModifyPosition: false,
+                afterModifyPosition: false,
                 beforeSwap: true,
-                afterSwap: true,
+                afterSwap: false,
                 beforeDonate: false,
                 afterDonate: false
             });
@@ -42,37 +38,5 @@ contract MembershipHook is BaseHook {
     ) external override returns (bytes4) {
         beforeSwapCount++;
         return BaseHook.beforeSwap.selector;
-    }
-
-    function afterSwap(
-        address,
-        PoolKey calldata,
-        IPoolManager.SwapParams calldata,
-        BalanceDelta,
-        bytes calldata
-    ) external override returns (bytes4) {
-        afterSwapCount++;
-        return BaseHook.afterSwap.selector;
-    }
-
-    function beforeModifyPosition(
-        address,
-        PoolKey calldata,
-        IPoolManager.ModifyPositionParams calldata,
-        bytes calldata
-    ) external override returns (bytes4) {
-        beforeModifyPositionCount++;
-        return BaseHook.beforeModifyPosition.selector;
-    }
-
-    function afterModifyPosition(
-        address,
-        PoolKey calldata,
-        IPoolManager.ModifyPositionParams calldata,
-        BalanceDelta,
-        bytes calldata
-    ) external override returns (bytes4) {
-        afterModifyPositionCount++;
-        return BaseHook.afterModifyPosition.selector;
     }
 }
