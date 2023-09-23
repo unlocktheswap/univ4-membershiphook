@@ -107,14 +107,15 @@ contract MembershipHook is BaseHook {
     /// @notice Purchases a membership and returns the token ID
     function purchaseMembership(
         PoolKey calldata key,
-        uint256 value
+        uint256 value,
+        address purchaser
     ) external payable returns (uint256 tokenId) {
         // parameters for key purchase
         uint256[] memory _values = new uint256[](1);
         _values[0] = value;
 
         address[] memory _recipients = new address[](1);
-        _recipients[0] = msg.sender;
+        _recipients[0] = purchaser;
 
         address[] memory _referrers = new address[](1);
         _referrers[0] = msg.sender;
@@ -127,7 +128,7 @@ contract MembershipHook is BaseHook {
 
         PoolId poolNum = key.toId();
         IPublicLock lockContract = lockContracts[poolNum];
-        uint256[] memory tokenIds = lockContract.purchase{value: msg.value}(
+        uint256[] memory tokenIds = lockContract.purchase(
             _values,
             _recipients,
             _referrers,
