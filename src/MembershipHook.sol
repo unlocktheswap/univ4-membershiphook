@@ -23,7 +23,12 @@ contract MembershipHook is BaseHook {
     // Address of the erc20s that has to be used to pay for membership
     mapping(PoolId => address) public tokenAddresses;
 
-    uint256 public beforeSwapCount;
+    struct CallbackData {
+        address sender;
+        PoolKey key;
+        uint256 amount0;
+        uint256 amount1;
+    }
 
     constructor(IPoolManager _poolManager) BaseHook(_poolManager) {}
 
@@ -85,7 +90,6 @@ contract MembershipHook is BaseHook {
         IPoolManager.SwapParams calldata,
         bytes calldata
     ) external override returns (bytes4) {
-        beforeSwapCount++;
         return BaseHook.beforeSwap.selector;
     }
 
@@ -138,7 +142,7 @@ contract MembershipHook is BaseHook {
             _data
         );
 
-        _withdrawAndDonate(value, poolNum);
+        // _withdrawAndDonate(value, poolNum);
 
         tokenId = tokenIds[0];
     }
@@ -153,7 +157,11 @@ contract MembershipHook is BaseHook {
         address tokenAddress = tokenAddresses[poolNum];
         IPublicLock flatRateLockContract = flatRateLockContracts[poolNum];
 
-        flatRateLockContract.withdraw(tokenAddress, payable(address(this)), amount);
+        flatRateLockContract.withdraw(
+            tokenAddress,
+            payable(address(this)),
+            amount
+        );
 
         uint256 _amount0 = 0;
         uint256 _amount1 = 0;
@@ -171,6 +179,16 @@ contract MembershipHook is BaseHook {
 
         bytes memory _hookData;
 
+        // Fails because we need lock
         delta = poolManager.donate(poolKey, _amount0, _amount1, _hookData);
+
+        // Need to obtain lock to call donate
+        // Need a reference to manager...
+        // delta = abi.decode(
+        //     manager.lock(
+        //         abi.encode(CallbackData(poolKey, _amount0, _amount1, _hookData))
+        //     ),
+        //     (BalanceDelta)
+        // );
     }
 }
