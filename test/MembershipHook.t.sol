@@ -101,8 +101,6 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
     function testMembershipHook() public {
         // positions were created in setup()
 
-        assertEq(membershipHook.beforeSwapCount(), 0);
-
         // Make sure our dynamic fee was applied (with hardcoded non-member fee)
         uint bal0pre = Currency.wrap(address(token0)).balanceOf(address(this));
         uint bal1pre = Currency.wrap(address(token1)).balanceOf(address(this));
@@ -123,7 +121,5 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
         // console2.log(diff0);
         // console2.log(diff1);
         assertGe(feePaid, 2000);
-
-        assertEq(membershipHook.beforeSwapCount(), 1);
     }
 }

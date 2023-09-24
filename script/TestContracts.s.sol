@@ -15,10 +15,11 @@ import {BalanceDelta} from "@uniswap/v4-core/contracts/types/BalanceDelta.sol";
 import {IHooks} from "@uniswap/v4-core/contracts/interfaces/IHooks.sol";
 
 contract TestContracts is Script {
+    address public hookAddr = 0x488bF5df107Ab59151abe28294d3cF402DE871B2;
+
     address public usdcAddr = 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9;
     address public wethAddr = 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9;
     address public swapAddr = 0x0165878A594ca255338adfa4d48449f69242Eb8F;
-    address public membAddr = 0x488BEb0045F0D21c129aF0CFeE5f7558058E8a3E;
     address public unlockAddr = 0xe082b26cEf079a095147F35c9647eC97c2401B83;
 
     PoolKey public poolKey;
@@ -33,15 +34,7 @@ contract TestContracts is Script {
     //uint160 MAX_PRICE_LIMIT = TickMath.MAX_SQRT_RATIO - 1;
 
     function setUp() public {
-        // Static values
-        //address usdcAddr = address(0);
-        //address wethAddr = address(0);
-        //address swapAddr = address(0);
-        //address membAddr = address(0);
-        //address unlockAddr = address(0);
-        //uint24 dynamicFee = 0x800000;
-
-        MembershipHook membershipHook = MembershipHook(membAddr);
+        MembershipHook membershipHook = MembershipHook(hookAddr);
         poolKey = PoolKey(
             Currency.wrap(usdcAddr),
             Currency.wrap(wethAddr),
@@ -56,11 +49,12 @@ contract TestContracts is Script {
         vm.startBroadcast(
             0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
         );
+        address anvilAddr = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
 
         MockERC20 usdc = MockERC20(usdcAddr);
         MockERC20 weth = MockERC20(wethAddr);
         PoolSwapTest swapRouter = PoolSwapTest(swapAddr);
-        MembershipHook membershipHook = MembershipHook(membAddr);
+        MembershipHook membershipHook = MembershipHook(hookAddr);
         IPublicLock unlockContract = IPublicLock(unlockAddr);
 
         // Should we do these in initialization script?
@@ -73,6 +67,17 @@ contract TestContracts is Script {
             address(swapRouter),
             0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
         );
+        usdc.approve(
+            address(unlockContract),
+            0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+        );
+        weth.approve(
+            address(unlockContract),
+            0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+        );
+
+        uint a = weth.allowance(anvilAddr, address(unlockContract));
+        console.log("APPROVED AOUNT", a);
 
         PoolSwapTest.TestSettings memory testSettings = PoolSwapTest
             .TestSettings({withdrawTokens: true, settleUsingTransfer: true});
@@ -90,28 +95,38 @@ contract TestContracts is Script {
         */
 
         ////////////////// 1 - swap
-        uint usdc0 = usdc.balanceOf(address(this));
-        uint weth0 = weth.balanceOf(address(this));
+        uint usdc0 = usdc.balanceOf(anvilAddr);
+        uint weth0 = weth.balanceOf(anvilAddr);
         console2.log("First swap");
+        console2.log(usdc0, weth0);
 
         // Copying swap logic from HookTest
         IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
             zeroForOne: true,
-            amountSpecified: 10000,
+            amountSpecified: 1 * 10 ** 18,
             sqrtPriceLimitX96: MIN_PRICE_LIMIT
         });
 
+        console2.log("B");
         BalanceDelta delta = swapRouter.swap(poolKey, params, testSettings);
+        console2.log("Swap done");
 
         // Not sure what balances will be due to exchange rate...
-        console2.log(usdc.balanceOf(address(this)) - usdc0);
-        console2.log(weth0 - weth.balanceOf(address(this)));
-        usdc0 = usdc.balanceOf(address(this));
-        weth0 = weth.balanceOf(address(this));
+        console2.log(usdc0 - usdc.balanceOf(anvilAddr));
+        console2.log(weth.balanceOf(anvilAddr) - weth0);
+        usdc0 = usdc.balanceOf(anvilAddr);
+        weth0 = weth.balanceOf(anvilAddr);
+        console2.log(usdc0, weth0);
         console2.log("Purchasing nft");
 
         ////////////////// 2 - purchase NFT
-        membershipHook.purchaseMembership(poolKey, 100, address(this));
+
+        console2.log("BEFORE", unlockContract.totalSupply());
+
+        membershipHook.purchaseMembership(poolKey, 100000000, anvilAddr);
+        console2.log("AFTER", unlockContract.totalSupply());
+
+        console2.log("Purchased nft");
 
         ////////////////// 3 - swap again, make sure we got the free fee
 
@@ -125,12 +140,6 @@ contract TestContracts is Script {
         });
         BalanceDelta delta2 = swapRouter.swap(poolKey, params2, testSettings);
         console2.log("Second swap");
-
-        // Not sure what balances will be due to exchange rate...
-        console2.log(usdc.balanceOf(address(this)) - usdc0);
-        console2.log(weth0 - weth.balanceOf(address(this)));
-        usdc0 = usdc.balanceOf(address(this));
-        weth0 = weth.balanceOf(address(this));
 
         vm.stopBroadcast();
     }
