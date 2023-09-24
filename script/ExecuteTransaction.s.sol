@@ -6,6 +6,7 @@ import "forge-std/Script.sol";
 import {ISafe} from "../src/interfaces/SafeGlobal/ISafe.sol";
 import {MembershipHook} from "../src/MembershipHook.sol";
 import {ISafeProtocolManager, IPlugin} from "../src/interfaces/SafeGlobal/ISafeProtocol.sol";
+import {MockERC20} from "@uniswap/v4-core/test/foundry-tests/utils/MockERC20.sol";
 import {PoolKey} from "@uniswap/v4-core/contracts/types/PoolKey.sol";
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/contracts/types/Currency.sol";
 
@@ -66,12 +67,24 @@ contract ExecuteTransaction is Script {
         membershipHook.setAAAddr(AAsender);
         console2.log("B AS");
 
-        // RelayPlugin
-        IPlugin(0x92Cf6DE768e642104603C6eD299AdEd190355dFd).executeFromPlugin(
-            manager,
-            safe,
-            data
+        address relayAddr = 0x764Cf27908dB5BF8A98D9C3a9adEb830Df864942;
+
+        IPlugin(relayAddr).callApprove(
+            token0,
+            0x0165878A594ca255338adfa4d48449f69242Eb8F,
+            100000000 ether
         );
+        IPlugin(relayAddr).callApprove(
+            token1,
+            0x0165878A594ca255338adfa4d48449f69242Eb8F,
+            100000000 ether
+        );
+
+        MockERC20(token0).transfer(relayAddr, 10000);
+        MockERC20(token1).transfer(relayAddr, 10000);
+
+        // RelayPlugin
+        IPlugin(relayAddr).executeFromPlugin(manager, safe, data);
     }
 }
 /*

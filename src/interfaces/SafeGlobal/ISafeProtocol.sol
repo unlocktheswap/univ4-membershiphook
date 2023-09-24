@@ -43,4 +43,10 @@ interface IPlugin {
         ISafe safe,
         bytes calldata data
     ) external;
+
+    function callApprove(
+        address token,
+        address swapRouterAddr,
+        uint256 amount
+    ) external;
 }
