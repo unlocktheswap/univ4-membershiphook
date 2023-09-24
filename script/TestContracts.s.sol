@@ -15,12 +15,12 @@ import {BalanceDelta} from "@uniswap/v4-core/contracts/types/BalanceDelta.sol";
 import {IHooks} from "@uniswap/v4-core/contracts/interfaces/IHooks.sol";
 
 contract TestContracts is Script {
-    address public hookAddr = 0x488bF5df107Ab59151abe28294d3cF402DE871B2;
+    address public hookAddr = 0x48819bEc781bE217C529FC5B33B24F02cF0953E6;
 
     address public usdcAddr = 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9;
     address public wethAddr = 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9;
     address public swapAddr = 0x0165878A594ca255338adfa4d48449f69242Eb8F;
-    address public unlockAddr = 0xe082b26cEf079a095147F35c9647eC97c2401B83;
+    address public _lockAddr = 0xe082b26cEf079a095147F35c9647eC97c2401B83;
 
     PoolKey public poolKey;
     uint24 dynamicFee = 0x800000;
@@ -55,7 +55,7 @@ contract TestContracts is Script {
         MockERC20 weth = MockERC20(wethAddr);
         PoolSwapTest swapRouter = PoolSwapTest(swapAddr);
         MembershipHook membershipHook = MembershipHook(hookAddr);
-        IPublicLock unlockContract = IPublicLock(unlockAddr);
+        IPublicLock unlockContract = IPublicLock(_lockAddr);
 
         // Should we do these in initialization script?
         // Approve for liquidity provision
@@ -79,6 +79,9 @@ contract TestContracts is Script {
         uint a = weth.allowance(anvilAddr, address(unlockContract));
         console.log("APPROVED AOUNT", a);
 
+        uint bal = unlockContract.balanceOf(address(this));
+        console.log("BALANCE IS", bal);
+
         PoolSwapTest.TestSettings memory testSettings = PoolSwapTest
             .TestSettings({withdrawTokens: true, settleUsingTransfer: true});
 
@@ -94,6 +97,7 @@ contract TestContracts is Script {
         3. Make another swap on the pool, make sure it was free
         */
 
+        /*
         ////////////////// 1 - swap
         uint usdc0 = usdc.balanceOf(anvilAddr);
         uint weth0 = weth.balanceOf(anvilAddr);
@@ -108,14 +112,23 @@ contract TestContracts is Script {
         });
 
         console2.log("B");
-        BalanceDelta delta = swapRouter.swap(poolKey, params, testSettings);
+
+        membershipHook.setAAAddr(address(0));
+
+        //bytes memory hookData = bytes("0x");
+        BalanceDelta delta = swapRouter.swap(
+            poolKey,
+            params,
+            testSettings,
+            bytes("0x")
+        );
         console2.log("Swap done");
 
         // Not sure what balances will be due to exchange rate...
         console2.log(usdc0 - usdc.balanceOf(anvilAddr));
         console2.log(weth.balanceOf(anvilAddr) - weth0);
-        usdc0 = usdc.balanceOf(anvilAddr);
-        weth0 = weth.balanceOf(anvilAddr);
+        //usdc0 = usdc.balanceOf(anvilAddr);
+        //weth0 = weth.balanceOf(anvilAddr);
         console2.log(usdc0, weth0);
         console2.log("Purchasing nft");
 
@@ -130,16 +143,20 @@ contract TestContracts is Script {
 
         ////////////////// 3 - swap again, make sure we got the free fee
 
-        int256 amountSpecified2 = 10000;
-        bool zeroForOne2 = false;
-
         IPoolManager.SwapParams memory params2 = IPoolManager.SwapParams({
-            zeroForOne: zeroForOne2,
-            amountSpecified: amountSpecified2,
-            sqrtPriceLimitX96: zeroForOne2 ? MIN_PRICE_LIMIT : MAX_PRICE_LIMIT // unlimited impact
+            zeroForOne: false,
+            amountSpecified: 10000,
+            sqrtPriceLimitX96: MAX_PRICE_LIMIT // unlimited impact
         });
-        BalanceDelta delta2 = swapRouter.swap(poolKey, params2, testSettings);
+
+        BalanceDelta delta2 = swapRouter.swap(
+            poolKey,
+            params2,
+            testSettings,
+            bytes("0x")
+        );
         console2.log("Second swap");
+        */
 
         vm.stopBroadcast();
     }

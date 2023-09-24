@@ -19,7 +19,7 @@ async function main({ unlockVersion } = {}) {
   };
   let lock1Deployed = await unlock.createLock(lockArgs1);
 
-  await lock1Deployed.lock.addLockManager('0x48488B1B7A89fc75D0889fa6d1065D0c4FDB6C6a');
+  await lock1Deployed.lock.addLockManager('0x48819bEc781bE217C529FC5B33B24F02cF0953E6');
 
   console.log('lock1Deployed', lock1Deployed.lockAddress);
 

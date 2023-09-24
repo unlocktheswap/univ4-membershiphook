@@ -36,7 +36,7 @@ contract InitializeNewPool is Script {
     function setUp() public {
         address _poolManager = 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512;
 
-        address _hookContract = 0x488bF5df107Ab59151abe28294d3cF402DE871B2;
+        address _hookContract = 0x48819bEc781bE217C529FC5B33B24F02cF0953E6;
         address _lockContract1 = 0xe082b26cEf079a095147F35c9647eC97c2401B83;
         address _lockContract2 = 0x788F1E4a99fa704Edb43fAE71946cFFDDcC16ccB;
         address _pmpt = 0x5FC8d32690cc91D4c39d9d3abcBD16989F875707;

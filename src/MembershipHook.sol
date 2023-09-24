@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+import "forge-std/console2.sol";
 import {BaseHook} from "v4-periphery/BaseHook.sol";
 
 import {Hooks} from "@uniswap/v4-core/contracts/libraries/Hooks.sol";
@@ -15,13 +16,19 @@ contract MembershipHook is BaseHook {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
 
+    // TODO - need to refactor so we use pool keys inside of functions
+    // and can support more pools
     PoolKey public poolKey;
+    // Address of our account abstraction contract which will be
+    // the usual entry point into interacting with the pool
+    address public aaAddr;
 
     // Interfaces for the Unlock NFT contract
     mapping(PoolId => IPublicLock) public flatRateLockContracts;
     mapping(PoolId => IPublicLock) public mevProtectionLockContracts;
     // Address of the erc20s that has to be used to pay for membership
     mapping(PoolId => address) public tokenAddresses;
+    mapping(address => uint) public lastSwap;
 
     struct CallbackData {
         address sender;
@@ -56,6 +63,12 @@ contract MembershipHook is BaseHook {
         return addr;
     }
 
+    /// @notice We need the address of the account abstraction address
+    /// TODO - Need modifiers to prevent anyone from calling this!
+    function setAAAddr(address _aaAddr) external {
+        aaAddr = _aaAddr;
+    }
+
     function afterInitialize(
         address,
         PoolKey calldata key,
@@ -64,8 +77,12 @@ contract MembershipHook is BaseHook {
         bytes calldata _data
     ) external override poolManagerOnly returns (bytes4) {
         // _data will be two addresses!
+        poolKey = key;
         address _flatRateLock = _bytesToAddress(_data[0:20]);
         address _mevProtectionLock = _bytesToAddress(_data[20:40]);
+        console2.log("afterInitialize addresses");
+        console2.log(_flatRateLock);
+        console2.log(_mevProtectionLock);
 
         IPublicLock flatRateLockContract = IPublicLock(_flatRateLock);
         IPublicLock mevProtectionLockContract = IPublicLock(_mevProtectionLock);
@@ -73,7 +90,10 @@ contract MembershipHook is BaseHook {
         // Payment token associated with the lockContract
         address tokenAddress = flatRateLockContract.tokenAddress();
 
-        PoolId poolNum = key.toId();
+        uint tempbal = flatRateLockContract.balanceOf(address(this));
+        console2.log("tempbal ok");
+
+        PoolId poolNum = poolKey.toId();
 
         // Add them to map
         flatRateLockContracts[poolNum] = flatRateLockContract;
@@ -84,12 +104,43 @@ contract MembershipHook is BaseHook {
         return BaseHook.afterInitialize.selector;
     }
 
+    function _inferUser(
+        address sender,
+        bytes calldata data
+    ) internal view returns (address user) {
+        if (sender == aaAddr) {
+            user = _bytesToAddress(data);
+        } else {
+            user = sender;
+        }
+    }
+
     function beforeSwap(
-        address,
+        address sender,
         PoolKey calldata,
         IPoolManager.SwapParams calldata,
-        bytes calldata
+        bytes calldata data
     ) external override returns (bytes4) {
+        console2.log("beforeSwap called");
+        address user = _inferUser(sender, data);
+        console2.log("got user");
+        // Sandwich attack protection: only allow one swap per block
+        // unless they have the special MEV NFT
+        if (lastSwap[user] == block.number) {
+            console2.log("match");
+            PoolId poolNum = poolKey.toId();
+            IPublicLock mevProtectionLockContract = flatRateLockContracts[
+                poolNum
+            ];
+            console2.log("hasMembership");
+            bool hasMembership = mevProtectionLockContract.balanceOf(user) > 0;
+            if (!hasMembership) {
+                revert("Only one swap per block");
+            }
+        }
+        console2.log("no match");
+        lastSwap[user] = block.number;
+        console2.log("set value, done");
         return BaseHook.beforeSwap.selector;
     }
 
@@ -100,9 +151,17 @@ contract MembershipHook is BaseHook {
         IPoolManager.SwapParams calldata params,
         bytes calldata data
     ) external returns (uint24 newFee) {
-        PoolId poolNum = key.toId();
+        console2.log("getFee called");
+        //PoolId poolNum = key.toId();
+        PoolId poolNum = poolKey.toId();
+        console2.log("getFee 1");
         IPublicLock flatRateLockContract = flatRateLockContracts[poolNum];
-        bool hasMembership = flatRateLockContract.balanceOf(msg.sender) > 0;
+        console2.log("getFee 2");
+        address user = _inferUser(sender, data);
+        console2.log("getFee 3");
+        console2.log("USER IS", user);
+        bool hasMembership = flatRateLockContract.balanceOf(user) > 0;
+        console2.log("getFee 4");
         if (hasMembership) {
             return 0;
         }
@@ -132,7 +191,8 @@ contract MembershipHook is BaseHook {
         bytes[] memory _data = new bytes[](1);
         _data[0] = bytes("0x");
 
-        PoolId poolNum = key.toId();
+        //PoolId poolNum = key.toId();
+        PoolId poolNum = poolKey.toId();
         IPublicLock flatRateLockContract = flatRateLockContracts[poolNum];
         uint256[] memory tokenIds = flatRateLockContract.purchase(
             _values,
