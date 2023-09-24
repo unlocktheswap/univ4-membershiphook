@@ -18,12 +18,10 @@ contract MembershipHook is BaseHook {
     PoolKey public poolKey;
 
     // Interfaces for the Unlock NFT contract
-    mapping(PoolId => IPublicLock) public lockContracts;
+    mapping(PoolId => IPublicLock) public flatRateLockContracts;
+    mapping(PoolId => IPublicLock) public mevProtectionLockContracts;
     // Address of the erc20s that has to be used to pay for membership
     mapping(PoolId => address) public tokenAddresses;
-
-    //IPublicLock public lockContract;
-    //address public tokenAddress;
 
     uint256 public beforeSwapCount;
 
@@ -60,18 +58,22 @@ contract MembershipHook is BaseHook {
         int24,
         bytes calldata _data
     ) external override poolManagerOnly returns (bytes4) {
-        // _data will be an address!
-        address _lockAddress = _bytesToAddress(_data);
+        // _data will be two addresses!
+        address _flatRateLock = _bytesToAddress(_data[0:20]);
+        address _mevProtectionLock = _bytesToAddress(_data[20:40]);
 
-        IPublicLock lockContract = IPublicLock(_lockAddress);
+        IPublicLock flatRateLockContract = IPublicLock(_flatRateLock);
+        IPublicLock mevProtectionLockContract = IPublicLock(_mevProtectionLock);
+
         // Payment token associated with the lockContract
-
-        address tokenAddress = lockContract.tokenAddress();
+        address tokenAddress = flatRateLockContract.tokenAddress();
 
         PoolId poolNum = key.toId();
 
         // Add them to map
-        lockContracts[poolNum] = lockContract;
+        flatRateLockContracts[poolNum] = flatRateLockContract;
+        mevProtectionLockContracts[poolNum] = mevProtectionLockContract;
+
         tokenAddresses[poolNum] = tokenAddress;
 
         return BaseHook.afterInitialize.selector;
@@ -95,8 +97,8 @@ contract MembershipHook is BaseHook {
         bytes calldata data
     ) external returns (uint24 newFee) {
         PoolId poolNum = key.toId();
-        IPublicLock lockContract = lockContracts[poolNum];
-        bool hasMembership = lockContract.balanceOf(msg.sender) > 0;
+        IPublicLock flatRateLockContract = flatRateLockContracts[poolNum];
+        bool hasMembership = flatRateLockContract.balanceOf(msg.sender) > 0;
         if (hasMembership) {
             return 0;
         }
@@ -127,8 +129,8 @@ contract MembershipHook is BaseHook {
         _data[0] = bytes("0x");
 
         PoolId poolNum = key.toId();
-        IPublicLock lockContract = lockContracts[poolNum];
-        uint256[] memory tokenIds = lockContract.purchase(
+        IPublicLock flatRateLockContract = flatRateLockContracts[poolNum];
+        uint256[] memory tokenIds = flatRateLockContract.purchase(
             _values,
             _recipients,
             _referrers,
@@ -149,9 +151,9 @@ contract MembershipHook is BaseHook {
         // withdraw all funds from the lock
 
         address tokenAddress = tokenAddresses[poolNum];
-        IPublicLock lockContract = lockContracts[poolNum];
+        IPublicLock flatRateLockContract = flatRateLockContracts[poolNum];
 
-        lockContract.withdraw(tokenAddress, payable(address(this)), amount);
+        flatRateLockContract.withdraw(tokenAddress, payable(address(this)), amount);
 
         uint256 _amount0 = 0;
         uint256 _amount1 = 0;

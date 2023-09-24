@@ -26,7 +26,8 @@ contract InitializeNewPool is Script {
 
     IPoolManager public poolManager;
     IHooks public hookContract;
-    IPublicLock public lockContract;
+    IPublicLock public lockContract1;
+    IPublicLock public lockContract2;
     PoolModifyPositionTest public modifyPositionRouter;
 
     address public token0;
@@ -35,15 +36,17 @@ contract InitializeNewPool is Script {
     function setUp() public {
         address _poolManager = 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512;
 
-        address _hookContract = 0x488BEb0045F0D21c129aF0CFeE5f7558058E8a3E;
-        address _lockContract = 0xe082b26cEf079a095147F35c9647eC97c2401B83;
+        address _hookContract = 0x48488B1B7A89fc75D0889fa6d1065D0c4FDB6C6a;
+        address _lockContract1 = 0xe082b26cEf079a095147F35c9647eC97c2401B83;
+        address _lockContract2 = 0x788F1E4a99fa704Edb43fAE71946cFFDDcC16ccB;
         address _pmpt = 0x5FC8d32690cc91D4c39d9d3abcBD16989F875707;
         address _token0 = 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9;
         address _token1 = 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9;
 
         poolManager = IPoolManager(_poolManager);
         hookContract = IHooks(_hookContract);
-        lockContract = IPublicLock(_lockContract);
+        lockContract1 = IPublicLock(_lockContract1);
+        lockContract2 = IPublicLock(_lockContract2);
         modifyPositionRouter = PoolModifyPositionTest(_pmpt);
 
         token0 = _token0;
@@ -70,7 +73,7 @@ contract InitializeNewPool is Script {
 
         // Starting price of 1600 for ETH/USDT pool
         uint160 sqrtPriceX96 = 3169126500570573503741758013440;
-        bytes memory lockAddressBytes = abi.encodePacked(address(lockContract));
+        bytes memory lockAddressBytes = abi.encodePacked(address(lockContract1), address(lockContract2));
 
         int24 tick = poolManager.initialize(
             poolKey,
@@ -106,9 +109,7 @@ contract InitializeNewPool is Script {
         );
         console2.log("D");
 
-        lockContract.addLockManager(address(hookContract));
-
-        bool isOwner = lockContract.isLockManager(address(hookContract));
+        bool isOwner = lockContract1.isLockManager(address(hookContract));
         console2.log(isOwner);
 
         vm.stopBroadcast();

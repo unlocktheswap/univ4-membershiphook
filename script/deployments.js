@@ -10,19 +10,32 @@ async function main({ unlockVersion } = {}) {
   await unlock.deployProtocol();
 
   // create a lock
-  const lockArgs = {
+  const lockArgs1 = {
     expirationDuration: 60 * 60 * 24 * 7, // 7 days
-    currencyContractAddress: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9", // null for ETH or erc20 address
-    keyPrice: "100000000", // in wei
-    maxNumberOfKeys: 10,
-    name: "A Demo Lock",
+    currencyContractAddress: null, // "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9", // null for ETH or erc20 address
+    keyPrice: "0", // in wei
+    maxNumberOfKeys: 1000,
+    name: "FlatRateSubscription",
   };
-  let lockDeployed = await unlock.createLock(lockArgs);
+  let lock1Deployed = await unlock.createLock(lockArgs1);
 
-  await lockDeployed.lock.addLockManager('0x4899Df6EE9F016c225b97D11aB6C5b8a97035b51');
+  await lock1Deployed.lock.addLockManager('0x48488B1B7A89fc75D0889fa6d1065D0c4FDB6C6a');
 
+  console.log('lock1Deployed', lock1Deployed.lockAddress);
 
-  console.log('lockDeployed', lockDeployed.lockAddress)
+  // create a lock
+  const lockArgs2 = {
+    expirationDuration: 60 * 60 * 24 * 7, // 7 days
+    currencyContractAddress: null, // "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9", // null for ETH or erc20 address
+    keyPrice: "0", // in wei
+    maxNumberOfKeys: 2,
+    name: "FlatRateSubscription",
+  };
+  let lock2Deployed = await unlock.createLock(lockArgs2);
+
+  await lock2Deployed.lock.addLockManager('0x48488B1B7A89fc75D0889fa6d1065D0c4FDB6C6a');
+
+  console.log('lock2Deployed', lock2Deployed.lockAddress);
 
   return unlock.address
 }
