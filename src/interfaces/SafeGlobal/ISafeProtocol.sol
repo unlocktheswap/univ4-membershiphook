@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity ^0.8.18;
-import {ISafe} from "./Accounts.sol";
-import {SafeRootAccess, SafeTransaction} from "../DataTypes.sol";
+import {ISafe} from "./ISafe.sol";
+import {SafeRootAccess, SafeTransaction} from "./DataTypes.sol";
 
 /**
  * @title ISafeProtocolManager interface a Manager should implement
@@ -18,7 +18,10 @@ interface ISafeProtocolManager {
      * @return data Array of bytes types returned upon the successful execution of all the actions. The size of the array will be the same as the size of the actions
      *         in case of succcessful execution. Empty if the call failed.
      */
-    function executeTransaction(ISafe safe, SafeTransaction calldata transaction) external returns (bytes[] memory data);
+    function executeTransaction(
+        ISafe safe,
+        SafeTransaction calldata transaction
+    ) external returns (bytes[] memory data);
 
     /**
      * @notice This function allows enabled plugins to execute delegate call transactions thorugh a Safe.
@@ -28,10 +31,16 @@ interface ISafeProtocolManager {
      * @return data Arbitrary length bytes data returned upon the successful execution. The size of the array will be the same as the size of the actions
      *         in case of succcessful execution. Empty if the call failed.
      */
-    function executeRootAccess(ISafe safe, SafeRootAccess calldata rootAccess) external returns (bytes memory data);
+    function executeRootAccess(
+        ISafe safe,
+        SafeRootAccess calldata rootAccess
+    ) external returns (bytes memory data);
 }
 
 interface IPlugin {
-    function executeFromPlugin(ISafeProtocolManager manager, ISafe safe, bytes calldata data) external;
+    function executeFromPlugin(
+        ISafeProtocolManager manager,
+        ISafe safe,
+        bytes calldata data
+    ) external;
 }
-

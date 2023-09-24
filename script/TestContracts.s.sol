@@ -16,7 +16,7 @@ import {IHooks} from "@uniswap/v4-core/contracts/interfaces/IHooks.sol";
 import {PoolSwapTest} from "../src/SwapManager.sol";
 
 contract TestContracts is Script {
-    address public hookAddr = 0x48e0F88aCfF3989E02D85B36CDBB8Ca6194388fF;
+    address public hookAddr = 0x48B33193C5Ce70B3A3110bbd0d8b254a61329490;
 
     address public usdcAddr = 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9;
     address public wethAddr = 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9;
