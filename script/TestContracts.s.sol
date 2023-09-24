@@ -15,11 +15,12 @@ import {BalanceDelta} from "@uniswap/v4-core/contracts/types/BalanceDelta.sol";
 import {IHooks} from "@uniswap/v4-core/contracts/interfaces/IHooks.sol";
 
 contract TestContracts is Script {
-    address public usdcAddr = address(0);
-    address public wethAddr = address(0);
-    address public swapAddr = address(0);
-    address public membAddr = address(0);
-    address public unlockAddr = address(0);
+    address public usdcAddr = 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9;
+    address public wethAddr = 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9;
+    address public swapAddr = 0x0165878A594ca255338adfa4d48449f69242Eb8F;
+    address public membAddr = 0x488BEb0045F0D21c129aF0CFeE5f7558058E8a3E;
+    address public unlockAddr = 0xe082b26cEf079a095147F35c9647eC97c2401B83;
+
     PoolKey public poolKey;
     uint24 dynamicFee = 0x800000;
 
