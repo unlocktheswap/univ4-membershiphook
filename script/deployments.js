@@ -9,6 +9,21 @@ async function main({ unlockVersion } = {}) {
   // need to fetch previous unlock versions
   await unlock.deployProtocol();
 
+   // create a lock
+  const lockArgs = {
+    expirationDuration: 60 * 60 * 24 * 7, // 7 days
+    currencyContractAddress: null, // null for ETH or erc20 address
+    keyPrice: "100000000", // in wei
+    maxNumberOfKeys: 10,
+    name: "A Demo Lock",
+  };
+  let lockDeployed = await unlock.createLock(lockArgs);
+
+  await lockDeployed.lock.addLockManager('0x4899Df6EE9F016c225b97D11aB6C5b8a97035b51');
+
+
+  console.log('lockDeployed', lockDeployed.lockAddress)
+
   return unlock.address
 }
 
