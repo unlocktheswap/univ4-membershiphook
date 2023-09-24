@@ -30,3 +30,8 @@ interface ISafeProtocolManager {
      */
     function executeRootAccess(ISafe safe, SafeRootAccess calldata rootAccess) external returns (bytes memory data);
 }
+
+interface IPlugin {
+    function executeFromPlugin(ISafeProtocolManager manager, ISafe safe, bytes calldata data) external;
+}
+
