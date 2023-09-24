@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "forge-std/console2.sol";
 import {BaseHook} from "v4-periphery/BaseHook.sol";
-
 import {Hooks} from "@uniswap/v4-core/contracts/libraries/Hooks.sol";
 import {IPoolManager} from "@uniswap/v4-core/contracts/interfaces/IPoolManager.sol";
 import {PoolKey} from "@uniswap/v4-core/contracts/types/PoolKey.sol";
@@ -16,9 +14,6 @@ contract MembershipHook is BaseHook {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
 
-    // TODO - need to refactor so we use pool keys inside of functions
-    // and can support more pools
-    PoolKey public poolKey;
     // Address of our account abstraction contract which will be
     // the usual entry point into interacting with the pool
     address public aaAddr;
@@ -77,12 +72,8 @@ contract MembershipHook is BaseHook {
         bytes calldata _data
     ) external override poolManagerOnly returns (bytes4) {
         // _data will be two addresses!
-        poolKey = key;
         address _flatRateLock = _bytesToAddress(_data[0:20]);
         address _mevProtectionLock = _bytesToAddress(_data[20:40]);
-        console2.log("afterInitialize addresses");
-        console2.log(_flatRateLock);
-        console2.log(_mevProtectionLock);
 
         IPublicLock flatRateLockContract = IPublicLock(_flatRateLock);
         IPublicLock mevProtectionLockContract = IPublicLock(_mevProtectionLock);
@@ -91,9 +82,8 @@ contract MembershipHook is BaseHook {
         address tokenAddress = flatRateLockContract.tokenAddress();
 
         uint tempbal = flatRateLockContract.balanceOf(address(this));
-        console2.log("tempbal ok");
 
-        PoolId poolNum = poolKey.toId();
+        PoolId poolNum = key.toId();
 
         // Add them to map
         flatRateLockContracts[poolNum] = flatRateLockContract;
@@ -117,30 +107,24 @@ contract MembershipHook is BaseHook {
 
     function beforeSwap(
         address sender,
-        PoolKey calldata,
+        PoolKey calldata key,
         IPoolManager.SwapParams calldata,
         bytes calldata data
     ) external override returns (bytes4) {
-        console2.log("beforeSwap called");
         address user = _inferUser(sender, data);
-        console2.log("got user");
         // Sandwich attack protection: only allow one swap per block
         // unless they have the special MEV NFT
         if (lastSwap[user] == block.number) {
-            console2.log("match");
-            PoolId poolNum = poolKey.toId();
+            PoolId poolNum = key.toId();
             IPublicLock mevProtectionLockContract = flatRateLockContracts[
                 poolNum
             ];
-            console2.log("hasMembership");
             bool hasMembership = mevProtectionLockContract.balanceOf(user) > 0;
             if (!hasMembership) {
                 revert("Only one swap per block");
             }
         }
-        console2.log("no match");
         lastSwap[user] = block.number;
-        console2.log("set value, done");
         return BaseHook.beforeSwap.selector;
     }
 
@@ -151,17 +135,10 @@ contract MembershipHook is BaseHook {
         IPoolManager.SwapParams calldata params,
         bytes calldata data
     ) external returns (uint24 newFee) {
-        console2.log("getFee called");
-        //PoolId poolNum = key.toId();
-        PoolId poolNum = poolKey.toId();
-        console2.log("getFee 1");
+        PoolId poolNum = key.toId();
         IPublicLock flatRateLockContract = flatRateLockContracts[poolNum];
-        console2.log("getFee 2");
         address user = _inferUser(sender, data);
-        console2.log("getFee 3");
-        console2.log("USER IS", user);
         bool hasMembership = flatRateLockContract.balanceOf(user) > 0;
-        console2.log("getFee 4");
         if (hasMembership) {
             return 0;
         }
@@ -191,8 +168,7 @@ contract MembershipHook is BaseHook {
         bytes[] memory _data = new bytes[](1);
         _data[0] = bytes("0x");
 
-        //PoolId poolNum = key.toId();
-        PoolId poolNum = poolKey.toId();
+        PoolId poolNum = key.toId();
         IPublicLock flatRateLockContract = flatRateLockContracts[poolNum];
         uint256[] memory tokenIds = flatRateLockContract.purchase(
             _values,
@@ -202,7 +178,7 @@ contract MembershipHook is BaseHook {
             _data
         );
 
-        // _withdrawAndDonate(value, poolNum);
+        // _withdrawAndDonate(value, poolNum, key);
 
         tokenId = tokenIds[0];
     }
@@ -210,10 +186,11 @@ contract MembershipHook is BaseHook {
     /// @notice Withdraws all funds from the lock and donates them to the pool
     function _withdrawAndDonate(
         uint256 amount,
-        PoolId poolNum
+        PoolKey calldata key
     ) internal returns (BalanceDelta delta) {
         // withdraw all funds from the lock
 
+        PoolId poolNum = key.toId();
         address tokenAddress = tokenAddresses[poolNum];
         IPublicLock flatRateLockContract = flatRateLockContracts[poolNum];
 
@@ -227,9 +204,9 @@ contract MembershipHook is BaseHook {
         uint256 _amount1 = 0;
 
         // check which currency to donate
-        if (Currency.unwrap(poolKey.currency0) == tokenAddress) {
+        if (Currency.unwrap(key.currency0) == tokenAddress) {
             _amount0 = amount;
-        } else if (Currency.unwrap(poolKey.currency1) == tokenAddress) {
+        } else if (Currency.unwrap(key.currency1) == tokenAddress) {
             _amount1 = amount;
         } else {
             // purchase token is different from pool token pair -> swap token to one of the pool tokens
@@ -240,13 +217,13 @@ contract MembershipHook is BaseHook {
         bytes memory _hookData;
 
         // Fails because we need lock
-        delta = poolManager.donate(poolKey, _amount0, _amount1, _hookData);
+        delta = poolManager.donate(key, _amount0, _amount1, _hookData);
 
         // Need to obtain lock to call donate
         // Need a reference to manager...
         // delta = abi.decode(
         //     manager.lock(
-        //         abi.encode(CallbackData(poolKey, _amount0, _amount1, _hookData))
+        //         abi.encode(CallbackData(key, _amount0, _amount1, _hookData))
         //     ),
         //     (BalanceDelta)
         // );

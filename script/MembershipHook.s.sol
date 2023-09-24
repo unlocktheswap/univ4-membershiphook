@@ -7,13 +7,13 @@ import {Hooks} from "@uniswap/v4-core/contracts/libraries/Hooks.sol";
 import {PoolManager} from "@uniswap/v4-core/contracts/PoolManager.sol";
 import {IPoolManager} from "@uniswap/v4-core/contracts/interfaces/IPoolManager.sol";
 import {PoolModifyPositionTest} from "@uniswap/v4-core/contracts/test/PoolModifyPositionTest.sol";
-import {PoolSwapTest} from "@uniswap/v4-core/contracts/test/PoolSwapTest.sol";
 import {PoolDonateTest} from "@uniswap/v4-core/contracts/test/PoolDonateTest.sol";
 import {MembershipHook} from "../src/MembershipHook.sol";
 import {IPublicLock} from "../src/interfaces/IPublicLock.sol";
 import {HookMiner} from "../test/utils/HookMiner.sol";
-
 import {MockERC20} from "@uniswap/v4-core/test/foundry-tests/utils/MockERC20.sol";
+//import {PoolSwapTest} from "@uniswap/v4-core/contracts/test/PoolSwapTest.sol";
+import {PoolSwapTest} from "../src/SwapManager.sol";
 
 /// @notice Forge script for deploying v4 & hooks to **anvil**
 /// @dev This script only works on an anvil RPC because v4 exceeds bytecode limits

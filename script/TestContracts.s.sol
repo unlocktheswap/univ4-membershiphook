@@ -4,7 +4,6 @@ pragma solidity ^0.8.19;
 import "forge-std/Script.sol";
 import "forge-std/console2.sol";
 import {IPoolManager} from "@uniswap/v4-core/contracts/interfaces/IPoolManager.sol";
-import {PoolSwapTest} from "@uniswap/v4-core/contracts/test/PoolSwapTest.sol";
 import {MembershipHook} from "../src/MembershipHook.sol";
 import {PoolKey} from "@uniswap/v4-core/contracts/types/PoolKey.sol";
 import {IPublicLock} from "../src/interfaces/IPublicLock.sol";
@@ -13,9 +12,11 @@ import {MockERC20} from "@uniswap/v4-core/test/foundry-tests/utils/MockERC20.sol
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/contracts/types/Currency.sol";
 import {BalanceDelta} from "@uniswap/v4-core/contracts/types/BalanceDelta.sol";
 import {IHooks} from "@uniswap/v4-core/contracts/interfaces/IHooks.sol";
+//import {PoolSwapTest} from "@uniswap/v4-core/contracts/test/PoolSwapTest.sol";
+import {PoolSwapTest} from "../src/SwapManager.sol";
 
 contract TestContracts is Script {
-    address public hookAddr = 0x48819bEc781bE217C529FC5B33B24F02cF0953E6;
+    address public hookAddr = 0x48e0F88aCfF3989E02D85B36CDBB8Ca6194388fF;
 
     address public usdcAddr = 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9;
     address public wethAddr = 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9;

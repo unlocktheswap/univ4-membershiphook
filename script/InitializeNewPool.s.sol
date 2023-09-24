@@ -9,7 +9,6 @@ import {IPoolManager} from "@uniswap/v4-core/contracts/interfaces/IPoolManager.s
 import {PoolKey} from "@uniswap/v4-core/contracts/types/PoolKey.sol";
 import {PoolModifyPositionTest} from "@uniswap/v4-core/contracts/test/PoolModifyPositionTest.sol";
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/contracts/types/Currency.sol";
-import {PoolSwapTest} from "@uniswap/v4-core/contracts/test/PoolSwapTest.sol";
 import {PoolDonateTest} from "@uniswap/v4-core/contracts/test/PoolDonateTest.sol";
 import {MembershipHook} from "../src/MembershipHook.sol";
 import {IPublicLock} from "../src/interfaces/IPublicLock.sol";
@@ -36,7 +35,7 @@ contract InitializeNewPool is Script {
     function setUp() public {
         address _poolManager = 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512;
 
-        address _hookContract = 0x48819bEc781bE217C529FC5B33B24F02cF0953E6;
+        address _hookContract = 0x48fd9cFFB80a711c1f9ED21D24141c1E11f901D1;
         address _lockContract1 = 0xe082b26cEf079a095147F35c9647eC97c2401B83;
         address _lockContract2 = 0x788F1E4a99fa704Edb43fAE71946cFFDDcC16ccB;
         address _pmpt = 0x5FC8d32690cc91D4c39d9d3abcBD16989F875707;
