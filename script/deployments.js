@@ -9,10 +9,10 @@ async function main({ unlockVersion } = {}) {
   // need to fetch previous unlock versions
   await unlock.deployProtocol();
 
-   // create a lock
+  // create a lock
   const lockArgs = {
     expirationDuration: 60 * 60 * 24 * 7, // 7 days
-    currencyContractAddress: null, // null for ETH or erc20 address
+    currencyContractAddress: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9", // null for ETH or erc20 address
     keyPrice: "100000000", // in wei
     maxNumberOfKeys: 10,
     name: "A Demo Lock",

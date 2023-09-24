@@ -14,29 +14,37 @@ import {PoolDonateTest} from "@uniswap/v4-core/contracts/test/PoolDonateTest.sol
 import {MembershipHook} from "../src/MembershipHook.sol";
 import {IPublicLock} from "../src/interfaces/IPublicLock.sol";
 import {HookMiner} from "../test/utils/HookMiner.sol";
+import {TickMath} from "@uniswap/v4-core/contracts/libraries/TickMath.sol";
+import {MockERC20} from "@uniswap/v4-core/test/foundry-tests/utils/MockERC20.sol";
+import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/contracts/types/PoolId.sol";
 
 /// @notice Forge script for deploying v4 & hooks to **anvil**
 contract InitializeNewPool is Script {
+    using PoolIdLibrary for PoolKey;
     address constant CREATE2_DEPLOYER =
         address(0x4e59b44847b379578588920cA78FbF26c0B4956C);
 
     IPoolManager public poolManager;
     IHooks public hookContract;
     IPublicLock public lockContract;
+    PoolModifyPositionTest public modifyPositionRouter;
 
     address public token0;
     address public token1;
 
     function setUp() public {
-        address _poolManager = 0x0165878A594ca255338adfa4d48449f69242Eb8F;
-        address _hookContract = 0x4899Df6EE9F016c225b97D11aB6C5b8a97035b51;
-        address _lockContract = 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0;
-        address _token0 = 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6;
-        address _token1 = 0x8A791620dd6260079BF849Dc5567aDC3F2FdC318;
+        address _poolManager = 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512;
+
+        address _hookContract = 0x488BEb0045F0D21c129aF0CFeE5f7558058E8a3E;
+        address _lockContract = 0xe082b26cEf079a095147F35c9647eC97c2401B83;
+        address _pmpt = 0x5FC8d32690cc91D4c39d9d3abcBD16989F875707;
+        address _token0 = 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9;
+        address _token1 = 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9;
 
         poolManager = IPoolManager(_poolManager);
         hookContract = IHooks(_hookContract);
         lockContract = IPublicLock(_lockContract);
+        modifyPositionRouter = PoolModifyPositionTest(_pmpt);
 
         token0 = _token0;
         token1 = _token1;
@@ -60,6 +68,7 @@ contract InitializeNewPool is Script {
 
         console2.log("B");
 
+        // Starting price of 1600 for ETH/USDT pool
         uint160 sqrtPriceX96 = 3169126500570573503741758013440;
         bytes memory lockAddressBytes = abi.encodePacked(address(lockContract));
 
@@ -70,7 +79,37 @@ contract InitializeNewPool is Script {
         );
         console2.log("C");
 
+        // Sanity check for successful initialization
+        PoolId id = poolKey.toId();
+        (
+            uint160 _sqrtPriceX96,
+            int24 _tick,
+            uint8 protocolSwapFee,
+            uint8 protocolWithdrawFee,
+            uint8 hookSwapFee,
+            uint8 hookWithdrawFee
+        ) = poolManager.getSlot0(id);
+        console2.log("GOT SQRT PRICE", _sqrtPriceX96);
+
+        // Approve for liquidity provision
+        MockERC20(token0).approve(address(modifyPositionRouter), 100 ether);
+        MockERC20(token1).approve(address(modifyPositionRouter), 100 ether);
+        // Make big stake across entire range
+        int256 amount = 1 ether;
+        modifyPositionRouter.modifyPosition(
+            poolKey,
+            IPoolManager.ModifyPositionParams(
+                TickMath.minUsableTick(60),
+                TickMath.maxUsableTick(60),
+                amount
+            )
+        );
+        console2.log("D");
+
         lockContract.addLockManager(address(hookContract));
+
+        bool isOwner = lockContract.isLockManager(address(hookContract));
+        console2.log(isOwner);
 
         vm.stopBroadcast();
     }
