@@ -61,9 +61,9 @@ contract InitializeNewPool is Script {
         PoolKey memory poolKey = PoolKey({
             currency0: Currency.wrap(token0),
             currency1: Currency.wrap(token1),
-            fee: 3000,
-            hooks: IHooks(address(0)),
-            tickSpacing: 10
+            fee: 0x800000,
+            hooks: IHooks(address(hookContract)),
+            tickSpacing: 60
         });
 
         console2.log("B");
