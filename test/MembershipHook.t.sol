@@ -2,7 +2,6 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
-import "forge-std/console2.sol";
 import {GasSnapshot} from "forge-gas-snapshot/GasSnapshot.sol";
 import {IHooks} from "@uniswap/v4-core/contracts/interfaces/IHooks.sol";
 import {Hooks} from "@uniswap/v4-core/contracts/libraries/Hooks.sol";
@@ -28,7 +27,6 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
     function setUp() public {
         // Need to create Unlock factory elsewhere
         IPublicLock lockContract = IPublicLock(address(42));
-        console2.log("F");
 
         // creates the pool manager, test tokens, and other utility routers
         HookTest.initHookTestEnv();
@@ -46,11 +44,9 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
             abi.encode(address(manager))
         );
 
-        console2.log("G");
         membershipHook = new MembershipHook{salt: salt}(
             IPoolManager(address(manager))
         );
-        console2.log("Z");
         require(
             address(membershipHook) == hookAddress,
             "MembershipHookTest: hook address mismatch"
@@ -58,7 +54,6 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
 
         // Set our fee to be the DYNAMIC_FEE_FLAG, we won't use whatever the value is anyways
         uint24 dynamicFee = 0x800000;
-        console2.log("X");
 
         // Create the pool
         poolKey = PoolKey(
@@ -69,14 +64,12 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
             IHooks(membershipHook)
         );
 
-        console2.log("H");
         poolId = poolKey.toId();
 
         address lockAddress = address(12345);
         bytes memory hookData = abi.encodePacked(lockAddress);
         // manager.initialize(poolKey, SQRT_RATIO_1_1, ZERO_BYTES);
         manager.initialize(poolKey, SQRT_RATIO_1_1, hookData);
-        console2.log("i");
 
         // Provide liquidity to the pool
         modifyPositionRouter.modifyPosition(
@@ -95,7 +88,6 @@ contract MembershipHookTest is HookTest, Deployers, GasSnapshot {
                 10 ether
             )
         );
-        console2.log("DONE");
     }
 
     function testMembershipHook() public {

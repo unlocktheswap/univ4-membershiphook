@@ -43,7 +43,9 @@ contract HookTest is Test {
         manager = new PoolManager(500000);
 
         // Helpers for interacting with the pool
-        modifyPositionRouter = new PoolModifyPositionTest(IPoolManager(address(manager)));
+        modifyPositionRouter = new PoolModifyPositionTest(
+            IPoolManager(address(manager))
+        );
         swapRouter = new PoolSwapTest(IPoolManager(address(manager)));
         donateRouter = new PoolDonateTest(IPoolManager(address(manager)));
 
@@ -56,16 +58,21 @@ contract HookTest is Test {
         token1.approve(address(swapRouter), amount);
     }
 
-    function swap(PoolKey memory key, int256 amountSpecified, bool zeroForOne) internal {
+    function swap(
+        PoolKey memory key,
+        int256 amountSpecified,
+        bool zeroForOne
+    ) internal {
         IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
             zeroForOne: zeroForOne,
             amountSpecified: amountSpecified,
             sqrtPriceLimitX96: zeroForOne ? MIN_PRICE_LIMIT : MAX_PRICE_LIMIT // unlimited impact
         });
 
-        PoolSwapTest.TestSettings memory testSettings =
-            PoolSwapTest.TestSettings({withdrawTokens: true, settleUsingTransfer: true});
+        PoolSwapTest.TestSettings memory testSettings = PoolSwapTest
+            .TestSettings({withdrawTokens: true, settleUsingTransfer: true});
 
-        swapRouter.swap(key, params, testSettings);
+        bytes memory hookData = bytes("0x");
+        swapRouter.swap(key, params, testSettings, hookData);
     }
 }
